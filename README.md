@@ -47,9 +47,9 @@ iex> flush()  # See messages
 
 The system supports multiple AI backends:
 
-### Claude Code CLI (Recommended if you have Claude Max)
+### Codex CLI
 ```bash
-# Just works if you have claude CLI installed
+# Works if you have `codex` installed
 iex> Liquid.start()
 > backends  # Check available backends
 ```
@@ -76,7 +76,7 @@ iex> Liquid.start()
 
 > backends        # Show available AI backends
 > use mock        # Switch to mock backend (no AI needed)
-> use claude_code # Use Claude Code CLI
+> use codex      # Use Codex CLI
 > use ollama      # Use local Ollama
 > make this count messages
 > spawn 5 workers

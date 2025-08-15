@@ -6,7 +6,7 @@ defmodule AI do
   
   @doc """
   Transform a server using the best available AI backend.
-  Priority: Claude Code > Ollama > Anthropic API > Mock
+  Priority: Codex CLI > Ollama > Anthropic API > Mock
   """
   def transform(description, context, server_id) do
     backend = detect_backend()
@@ -14,9 +14,9 @@ defmodule AI do
     IO.puts("🤖 Using AI backend: #{backend}")
     
     case backend do
-      :claude_code ->
-        AI.ClaudeCode.transform(description, context, server_id)
-      
+      :codex ->
+        AI.Codex.transform(description, context, server_id)
+
       :ollama ->
         AI.Ollama.transform(description, context, server_id)
       
@@ -37,7 +37,7 @@ defmodule AI do
   """
   def available_backends do
     [
-      claude_code: AI.ClaudeCode.available?(),
+      codex: AI.Codex.available?(),
       ollama: AI.Ollama.available?(),
       anthropic_api: api_available?(),
       mock: true
@@ -49,7 +49,7 @@ defmodule AI do
   @doc """
   Manually set the preferred backend
   """
-  def set_backend(backend) when backend in [:claude_code, :ollama, :anthropic_api, :mock] do
+  def set_backend(backend) when backend in [:codex, :ollama, :anthropic_api, :mock] do
     Application.put_env(:liquid, :ai_backend, backend)
     {:ok, backend}
   end
@@ -62,7 +62,7 @@ defmodule AI do
       nil ->
         # Auto-detect based on availability
         cond do
-          AI.ClaudeCode.available?() -> :claude_code
+          AI.Codex.available?() -> :codex
           AI.Ollama.available?() -> :ollama
           api_available?() -> :anthropic_api
           true -> :mock
@@ -81,14 +81,14 @@ defmodule AI do
   
   defp detect_backend_without_preference do
     cond do
-      AI.ClaudeCode.available?() -> :claude_code
+      AI.Codex.available?() -> :codex
       AI.Ollama.available?() -> :ollama
       api_available?() -> :anthropic_api
       true -> :mock
     end
   end
   
-  defp backend_available?(:claude_code), do: AI.ClaudeCode.available?()
+  defp backend_available?(:codex), do: AI.Codex.available?()
   defp backend_available?(:ollama), do: AI.Ollama.available?()
   defp backend_available?(:anthropic_api), do: api_available?()
   defp backend_available?(:mock), do: true

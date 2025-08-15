@@ -21,7 +21,11 @@ defmodule Morpheus do
     IO.puts("  'status' - Show system status")
     IO.puts("  'list' - List all processes")
     IO.puts("  'backends' - Show available AI backends")
-    IO.puts("  'use <backend>' - Switch AI backend (mock/ollama/claude_code/api)\n")
+    IO.puts("  'use <backend>' - Switch AI backend (mock/ollama/codex/api)\n")
+    IO.puts("  'architect <desc>' - Ask architect to apply goal to :prime")
+    IO.puts("  'architect make <name>' - Turn an existing server into an architect")
+    IO.puts("  'architect spawn <name>' - Spawn a new architect server\n")
+    IO.puts("  'history' - Show recent events\n")
     
     # The conversation loop
     loop(prime_pid)
@@ -43,7 +47,11 @@ defmodule Morpheus do
       "list" ->
         show_processes()
         loop(prime_pid)
-      
+
+      "history" ->
+        show_history()
+        loop(prime_pid)
+
       "backends" ->
         show_backends()
         loop(prime_pid)
@@ -57,7 +65,12 @@ defmodule Morpheus do
           ["use", backend] ->
             switch_backend(String.to_atom(backend))
             loop(prime_pid)
-          
+
+          ["architect", rest] ->
+            ensure_architect()
+            handle_architect_command(rest)
+            loop(prime_pid)
+
           _ ->
             # Transform through conversation
             IO.puts("\n🔄 Transforming: #{description}")
@@ -89,8 +102,8 @@ defmodule Morpheus do
     IO.puts("Current: #{current}")
     IO.puts("\nAvailable:")
     
-    if :claude_code in backends do
-      IO.puts("  • claude_code - Claude Code CLI (your subscription)")
+    if :codex in backends do
+      IO.puts("  • codex - Codex CLI")
     end
     
     if :ollama in backends do
@@ -151,5 +164,63 @@ defmodule Morpheus do
       end
     end)
     IO.puts("")
+  end
+
+  defp show_history do
+    IO.puts("\n═══ Recent Events ═══")
+    LiquidRegistry.get_recent(20)
+    |> Enum.each(fn {id, ts, event, data} ->
+      time = DateTime.from_unix!(ts, :millisecond) |> DateTime.to_time() |> to_string()
+      IO.puts("  • #{time} | #{inspect(id)} | #{event} | #{inspect(data)}")
+    end)
+    IO.puts("")
+  end
+
+  defp ensure_architect do
+    case LiquidRegistry.lookup(:prime) do
+      %{type: :architect} -> :ok
+      _ ->
+        Examples.transform_with(:prime, :architect)
+        IO.puts("✓ Prime transformed into architect")
+    end
+  end
+
+  defp handle_architect_command(rest) do
+    case String.split(rest, " ", parts: 2) do
+      ["make", name] ->
+        atom = String.to_atom(name)
+        send(:prime, {:make_architect, atom})
+        IO.puts("→ Requesting architect to make #{name} an architect")
+
+      ["spawn", name] ->
+        atom = String.to_atom(name)
+        send(:prime, {:spawn_architect, atom})
+        IO.puts("→ Requesting architect to spawn architect #{name}")
+
+      ["apply", rest2] ->
+        case String.split(rest2, " ", parts: 2) do
+          [name, desc] ->
+            atom = String.to_atom(name)
+            send(:prime, {:apply_to, atom, desc, self()})
+            await_architect_result()
+          _ ->
+            IO.puts("Usage: architect apply <name> <description>")
+        end
+
+      [desc] ->
+        send(:prime, {:goal, desc, self()})
+        await_architect_result()
+    end
+  end
+
+  defp await_architect_result do
+    receive do
+      {:architect_applied, {:ok, %{target: target, description: desc}}} ->
+        IO.puts("✓ Architect applied to #{inspect(target)}: #{desc}")
+      {:architect_applied, {:error, reason}} ->
+        IO.puts("✗ Architect failed: #{inspect(reason)}")
+    after
+      3_000 -> IO.puts("⏱ No response from architect")
+    end
   end
 end

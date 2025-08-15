@@ -12,12 +12,19 @@ defmodule SafeCompiler do
     Node,
     :net_adm,
     :net_kernel,
-    :init
+    :init,
+    :erlang,
+    IO,
+    Req,
+    Universal,
+    Capabilities
   ]
   
   @forbidden_functions [
     :spawn_link,
     :spawn_monitor,
+    :spawn,
+    :open_port,
     :exit,
     :halt,
     :throw
